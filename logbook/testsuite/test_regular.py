@@ -15,9 +15,12 @@ import re
 import sys
 import time
 try:
-    import thread
+    from gevent import thread
 except ImportError:
-    import _thread as thread
+    try:
+        import thread
+    except ImportError:
+        import _thread as thread
 import pickle
 import shutil
 import unittest
@@ -1678,6 +1681,30 @@ class UnicodeTestCase(LogbookTestCase):
         finally:
             capture_stderr.end()
         self.assertIn('WARNING: testlogger: \u2603 \u2603', captured)
+
+    @require_module('gevent')
+    def test_gevent_spawn(self):
+        from gevent import spawn, sleep
+        stream = capture_stderr.start()
+
+        stderr_handler = logbook.StderrHandler(format_string="foo")
+        null_handler = logbook.NullHandler()
+
+        def func(handler):
+            with handler.threadbound():
+                self.log.warn("hi")
+                sleep(0.1)
+                self.log.warn("bye")
+        try:
+            f1 = spawn(func, stderr_handler)
+            f2 = spawn(func, null_handler)
+            f1.join()
+            f2.join()
+            captured = stream.getvalue()
+        finally:
+            capture_stderr.end()
+        self.assertEquals("foo\nfoo\n", captured)
+
 
 def suite():
     loader = unittest.TestLoader()

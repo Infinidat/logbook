@@ -17,7 +17,10 @@ import pickle
 import shutil
 import unittest
 import tempfile
-import socket
+try:
+    from gevent import socket
+except ImportError:
+    import socket
 from datetime import datetime, timedelta
 from random import randrange
 from contextlib import contextmanager
